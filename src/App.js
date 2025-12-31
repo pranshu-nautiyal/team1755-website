@@ -1,19 +1,29 @@
+console.log('ENV CHECK:', process.env.REACT_APP_FIREBASE_API_KEY);
+console.log('ALL ENV:', process.env);
+
+
 import React, { useState, useEffect } from 'react';
 import { Calendar, Search, MessageSquare, Users, Book, Plus, Edit2, Trash2, X, Send, LogIn, LogOut, User } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 
-// Firebase configuration - YOU NEED TO REPLACE THIS WITH YOUR OWN
+// Firebase configuration - USING ENVIRONMENT VARIABLES
 const firebaseConfig = {
-  apiKey: "AIzaSyBWR0BiaqlrhtUHlQWEQfP8gBzhuhYaIqI",
-  authDomain: "team1755-nuclear.firebaseapp.com",
-  projectId: "team1755-nuclear",
-  storageBucket: "team1755-nuclear.firebasestorage.app",
-  messagingSenderId: "1076267796238",
-  appId: "1:1076267796238:web:1692ac29caa0007ba1f95f",
-  measurementId: "G-LFPG9MDVE8"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
+
+// ADD THIS LINE TO DEBUG:
+console.log('Firebase API Key:', process.env.REACT_APP_FIREBASE_API_KEY);
+console.log('Full config:', firebaseConfig);
+
+// OpenAI API Key - USING ENVIRONMENT VARIABLE
+const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -34,33 +44,40 @@ const TEAM_MEMBERS = [
   {
     name: 'Yatharth Gohel',
     role: 'Lead Builder',
-    bio: 'Main Buildier of 1755N. ',
+    bio: 'Lead Builder of the robot',
     image: 'https://via.placeholder.com/300x300/4B5563/FFFFFF?text=JS',
   },
   {
-    name: 'Krithik Sentilkumar',
-    role: 'Lead Programmer',
-    bio: 'One of the Lead Programmers of 1755N.',
+    name: 'Avaneesh',
+    role: 'Builder',
+    bio: 'Builder of the robot',
     image: 'https://via.placeholder.com/300x300/3B82F6/FFFFFF?text=SJ',
   },
   {
     name: 'Pranshu Nautiyal',
-    role: 'Notebook Manager, CAD, Builder',
-    bio: 'Documentation Manager and CAD specialist.',
+    role: 'Notebook Manager, Cadder, Builder',
+    bio: 'CAD specialist, notebook manager, and a builder',
     image: 'https://via.placeholder.com/300x300/10B981/FFFFFF?text=MC',
   },
   {
-    name: 'Ajay Srinivasan',
-    role: 'Lead Programmer',
-    bio: 'One of the Lead Programmers of 1755N.',
+    name: 'Vidhan Jain',
+    role: 'Builder, Cadder',
+    bio: 'Builder and CAD specialist',
     image: 'https://via.placeholder.com/300x300/8B5CF6/FFFFFF?text=ER',
   },
   {
-    name: 'Vidhan Jain',
-    role: 'Builder, CAD',
-    bio: 'Builder and CAD specialist.',
+    name: 'Krithik Sentilkumar',
+    role: 'Programmer',
+    bio: 'Wrote Drive Train Code and Autonomous Routines',
     image: 'https://via.placeholder.com/300x300/EF4444/FFFFFF?text=DP',
   },
+  {
+    name: 'Ajay Srinivasan',
+    role: 'Programmer',
+    bio: 'Wrote Drive Train Code and Autonomous Routines',
+    image: 'https://via.placeholder.com/300x300/EF4444/FFFFFF?text=DP',
+  }
+  
 ];
 
 export default function RoboticsWebsite() {
@@ -89,7 +106,6 @@ export default function RoboticsWebsite() {
     images: []
   });
 
-  // Auth state listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -97,7 +113,6 @@ export default function RoboticsWebsite() {
     return () => unsubscribe();
   }, []);
 
-  // Real-time listener for entries
   useEffect(() => {
     const q = query(collection(db, 'entries'), orderBy('date', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -107,7 +122,6 @@ export default function RoboticsWebsite() {
       });
       setEntries(entriesData);
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -263,38 +277,38 @@ export default function RoboticsWebsite() {
         return `Date: ${entry.date}\nCategory: ${category}\nTitle: ${entry.title}\nContent: ${entry.content}`;
       }).join('\n\n---\n\n');
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
+          model: 'gpt-4',
           messages: [
             {
+              role: 'system',
+              content: `You are an AI assistant for Team 1755 Nuclear, a robotics team. Answer questions based on the following notebook entries. If the information isn't in the notebook entries, say so politely and offer general robotics knowledge if helpful.\n\nNotebook Entries:\n${notebookContext}`
+            },
+            {
               role: 'user',
-              content: `You are an AI assistant for Team 1755 Nuclear, a robotics team. Answer questions based on the following notebook entries. If the information isn't in the notebook entries, say so politely and offer general robotics knowledge if helpful.
-
-Notebook Entries:
-${notebookContext}
-
-User Question: ${currentInput}`
+              content: currentInput
             }
-          ]
+          ],
+          max_tokens: 500
         })
       });
 
       const data = await response.json();
       const assistantMessage = {
         role: 'assistant',
-        content: data.content[0].text
+        content: data.choices[0].message.content
       };
       setChatMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       setChatMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Sorry, I encountered an error processing your request.'
+        content: 'Sorry, I encountered an error. Make sure your OpenAI API key is set correctly.'
       }]);
     }
     setIsLoading(false);
@@ -410,8 +424,8 @@ User Question: ${currentInput}`
             <h2 className="text-3xl font-bold text-gray-900 mb-6">About Team 1755 Nuclear</h2>
             <div className="prose max-w-none text-gray-700">
               <p className="text-lg mb-4">
-                Team 1755 Nuclear is a competitive robotics team dedicated to excellence in engineering, 
-                programming, and teamwork. We participate in FIRST Robotics Competition, where we design, 
+                Team 1755 Nuclear is a competitive robotics team based in Illinois dedicated to excellence in engineering, 
+                programming, and teamwork. We participate in VEX Robotics Competition, where we design, 
                 build, and program robots to compete in challenging games against teams from around the world.
               </p>
               <p className="text-lg mb-4">
@@ -723,7 +737,7 @@ User Question: ${currentInput}`
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                   />
                   {uploadingImages && <p className="text-sm text-blue-600 mt-2">Processing images...</p>}
-                  <p className="text-xs text-gray-500 mt-1">Images stored as base64 (free tier compatible)</p>
+                  <p className="text-xs text-gray-500 mt-1">Images stored as base64</p>
                   {formData.images.length > 0 && (
                     <div className="grid grid-cols-3 gap-4 mt-4">
                       {formData.images.map((img, idx) => (
@@ -767,3 +781,4 @@ User Question: ${currentInput}`
       )}
     </div>
   );
+}
