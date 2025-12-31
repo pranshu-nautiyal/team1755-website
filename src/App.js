@@ -1,14 +1,9 @@
-console.log('ENV CHECK:', process.env.REACT_APP_FIREBASE_API_KEY);
-console.log('ALL ENV:', process.env);
-
-
 import React, { useState, useEffect } from 'react';
 import { Calendar, Search, MessageSquare, Users, Book, Plus, Edit2, Trash2, X, Send, LogIn, LogOut, User } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 
-// Firebase configuration - USING ENVIRONMENT VARIABLES
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -18,9 +13,6 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_FIREBASE_APP_ID
 };
 
-// ADD THIS LINE TO DEBUG:
-console.log('Firebase API Key:', process.env.REACT_APP_FIREBASE_API_KEY);
-console.log('Full config:', firebaseConfig);
 
 // OpenAI API Key - USING ENVIRONMENT VARIABLE
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
