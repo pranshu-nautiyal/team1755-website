@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Search, MessageSquare, Users, Book, Plus, Edit2, Trash2, X, Send } from 'lucide-react';
+import { Calendar, Search, MessageSquare, Users, Book, Plus, Edit2, Trash2, X, Send, LogIn, LogOut, User } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 
 // Firebase configuration - YOU NEED TO REPLACE THIS WITH YOUR OWN
 const firebaseConfig = {
@@ -17,6 +18,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 const CATEGORIES = [
   { id: 'code', label: 'Code Development', color: 'bg-blue-500' },
@@ -27,11 +29,46 @@ const CATEGORIES = [
   { id: 'competitions', label: 'Competitions', color: 'bg-yellow-500' }
 ];
 
+// Sample team members - CUSTOMIZE THIS!
+const TEAM_MEMBERS = [
+  {
+    name: 'Yatharth Gohel',
+    role: 'Lead Builder',
+    bio: 'Main Buildier of 1755N. ',
+    image: 'https://via.placeholder.com/300x300/4B5563/FFFFFF?text=JS',
+  },
+  {
+    name: 'Krithik Sentilkumar',
+    role: 'Lead Programmer',
+    bio: 'One of the Lead Programmers of 1755N.',
+    image: 'https://via.placeholder.com/300x300/3B82F6/FFFFFF?text=SJ',
+  },
+  {
+    name: 'Pranshu Nautiyal',
+    role: 'Notebook Manager, CAD, Builder',
+    bio: 'Documentation Manager and CAD specialist.',
+    image: 'https://via.placeholder.com/300x300/10B981/FFFFFF?text=MC',
+  },
+  {
+    name: 'Ajay Srinivasan',
+    role: 'Lead Programmer',
+    bio: 'One of the Lead Programmers of 1755N.',
+    image: 'https://via.placeholder.com/300x300/8B5CF6/FFFFFF?text=ER',
+  },
+  {
+    name: 'Vidhan Jain',
+    role: 'Builder, CAD',
+    bio: 'Builder and CAD specialist.',
+    image: 'https://via.placeholder.com/300x300/EF4444/FFFFFF?text=DP',
+  },
+];
+
 export default function RoboticsWebsite() {
   const [activeTab, setActiveTab] = useState('about');
   const [entries, setEntries] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [hoveredDate, setHoveredDate] = useState(null);
@@ -39,6 +76,10 @@ export default function RoboticsWebsite() {
   const [chatInput, setChatInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -47,6 +88,14 @@ export default function RoboticsWebsite() {
     content: '',
     images: []
   });
+
+  // Auth state listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Real-time listener for entries
   useEffect(() => {
@@ -61,6 +110,26 @@ export default function RoboticsWebsite() {
 
     return () => unsubscribe();
   }, []);
+
+  const handleLogin = async () => {
+    setLoginError('');
+    try {
+      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      setShowLoginModal(false);
+      setLoginEmail('');
+      setLoginPassword('');
+    } catch (error) {
+      setLoginError('Invalid email or password');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -80,6 +149,11 @@ export default function RoboticsWebsite() {
   };
 
   const handleSubmit = async () => {
+    if (!user) {
+      alert('Please log in to create entries');
+      return;
+    }
+
     if (!formData.title || !formData.date || !formData.content) {
       alert('Please fill in all required fields');
       return;
@@ -94,12 +168,14 @@ export default function RoboticsWebsite() {
           category: formData.category,
           content: formData.content,
           images: formData.images,
-          updatedAt: new Date().toISOString()
+          updatedAt: new Date().toISOString(),
+          updatedBy: user.email
         });
       } else {
         await addDoc(collection(db, 'entries'), {
           ...formData,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
+          createdBy: user.email
         });
       }
       resetForm();
@@ -122,6 +198,10 @@ export default function RoboticsWebsite() {
   };
 
   const handleEdit = (entry) => {
+    if (!user) {
+      alert('Please log in to edit entries');
+      return;
+    }
     setEditingEntry(entry);
     setFormData({
       title: entry.title,
@@ -134,6 +214,10 @@ export default function RoboticsWebsite() {
   };
 
   const handleDelete = async (id) => {
+    if (!user) {
+      alert('Please log in to delete entries');
+      return;
+    }
     if (window.confirm('Are you sure you want to delete this entry?')) {
       try {
         await deleteDoc(doc(db, 'entries', id));
@@ -259,8 +343,37 @@ User Question: ${currentInput}`
     <div className="min-h-screen bg-gray-50">
       <header className="bg-gradient-to-r from-gray-900 to-gray-700 text-white shadow-lg">
         <div className="container mx-auto px-6 py-6">
-          <h1 className="text-4xl font-bold">Team 1755 Nuclear</h1>
-          <p className="text-gray-300 mt-2">Robotics Excellence</p>
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-bold">Team 1755 Nuclear</h1>
+              <p className="text-gray-300 mt-2">Robotics Excellence</p>
+            </div>
+            <div className="flex items-center space-x-4">
+              {user ? (
+                <>
+                  <div className="flex items-center space-x-2 text-gray-300">
+                    <User size={20} />
+                    <span className="text-sm">{user.email}</span>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors"
+                  >
+                    <LogOut size={18} />
+                    <span>Logout</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg transition-colors"
+                >
+                  <LogIn size={18} />
+                  <span>Team Login</span>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 
@@ -269,6 +382,7 @@ User Question: ${currentInput}`
           <div className="flex space-x-8">
             {[
               { id: 'about', label: 'About', icon: Users },
+              { id: 'team', label: 'Meet the Team', icon: Users },
               { id: 'notebook', label: 'Notebook', icon: Book },
               { id: 'calendar', label: 'Calendar', icon: Calendar },
               { id: 'chat', label: 'AI Assistant', icon: MessageSquare }
@@ -296,13 +410,13 @@ User Question: ${currentInput}`
             <h2 className="text-3xl font-bold text-gray-900 mb-6">About Team 1755 Nuclear</h2>
             <div className="prose max-w-none text-gray-700">
               <p className="text-lg mb-4">
-                Team 1755 Nuclear is a competitive robotics team based in Illinois dedicated to excellence in engineering, 
-                programming, and teamwork. We participate in VEX Robotics Competition, where we design, 
+                Team 1755 Nuclear is a competitive robotics team dedicated to excellence in engineering, 
+                programming, and teamwork. We participate in FIRST Robotics Competition, where we design, 
                 build, and program robots to compete in challenging games against teams from around the world.
               </p>
               <p className="text-lg mb-4">
                 Our team fosters innovation, collaboration, and technical skills while building lasting 
-                friendships and professional relationships. We believe in inspiring people to pursue 
+                friendships and professional relationships. We believe in inspiring young people to pursue 
                 careers in science, technology, engineering, and mathematics through hands-on learning and 
                 real-world problem solving.
               </p>
@@ -312,6 +426,26 @@ User Question: ${currentInput}`
                 documents our journey, capturing every meeting, build session, code iteration, and competition 
                 experience.
               </p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'team' && (
+          <div className="bg-white rounded-lg shadow-md p-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-8">Meet the Team</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {TEAM_MEMBERS.map((member, idx) => (
+                <div key={idx} className="bg-gray-50 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                  <img
+                    src={member.image}
+                    alt={member.name}
+                    className="w-32 h-32 rounded-full mx-auto mb-4 object-cover"
+                  />
+                  <h3 className="text-xl font-bold text-gray-900 text-center">{member.name}</h3>
+                  <p className="text-blue-600 text-center font-medium mb-3">{member.role}</p>
+                  <p className="text-gray-600 text-center text-sm">{member.bio}</p>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -332,7 +466,7 @@ User Question: ${currentInput}`
                 </div>
               </div>
               <button
-                onClick={() => setShowModal(true)}
+                onClick={() => user ? setShowModal(true) : setShowLoginModal(true)}
                 className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Plus size={20} />
@@ -357,20 +491,22 @@ User Question: ${currentInput}`
                             </span>
                           </div>
                         </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEdit(entry)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          >
-                            <Edit2 size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(entry.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
+                        {user && (
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleEdit(entry)}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            >
+                              <Edit2 size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(entry.id)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <p className="text-gray-700 whitespace-pre-wrap mb-4">{entry.content}</p>
                       {entry.images && entry.images.length > 0 && (
@@ -479,6 +615,51 @@ User Question: ${currentInput}`
         )}
       </main>
 
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">Team Member Login</h3>
+              <button onClick={() => setShowLoginModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="team@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <input
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="••••••••"
+                />
+              </div>
+              {loginError && (
+                <p className="text-red-600 text-sm">{loginError}</p>
+              )}
+              <button
+                onClick={handleLogin}
+                className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -586,4 +767,3 @@ User Question: ${currentInput}`
       )}
     </div>
   );
-}
