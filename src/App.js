@@ -51,12 +51,7 @@ const TEAM_MEMBERS = [
     bio: 'CAD specialist, notebook manager, and a builder',
     image: 'https://via.placeholder.com/300x300/10B981/FFFFFF?text=MC',
   },
-  {
-    name: 'Vidhan Jain',
-    role: 'Builder, Cadder',
-    bio: 'Builder and CAD specialist',
-    image: 'https://via.placeholder.com/300x300/8B5CF6/FFFFFF?text=ER',
-  },
+  
   {
     name: 'Krithik Sentilkumar',
     role: 'Programmer',
@@ -69,7 +64,6 @@ const TEAM_MEMBERS = [
     bio: 'Wrote Drive Train Code and Autonomous Routines',
     image: 'https://via.placeholder.com/300x300/EF4444/FFFFFF?text=DP',
   }
-  
 ];
 
 export default function RoboticsWebsite() {
@@ -383,7 +377,7 @@ export default function RoboticsWebsite() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-4xl font-bold">Team 1755 Nuclear</h1>
-              <p className="text-gray-300 mt-2">Robotics Excellence</p>
+              <p className="text-gray-300 mt-2">VEX Robotics Competition Team</p>
             </div>
             <div className="flex items-center space-x-4">
               {user ? (
