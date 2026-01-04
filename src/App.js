@@ -40,9 +40,10 @@ const TEAM_MEMBERS = [
     image: 'https://via.placeholder.com/300x300/4B5563/FFFFFF?text=JS',
   },
   {
-    name: 'Avaneesh',
+    name: 'Avaneesh Sirikonda',
     role: 'Builder',
     bio: 'Builder of the robot',
+    //test test test
     image: 'https://via.placeholder.com/300x300/3B82F6/FFFFFF?text=SJ',
   },
   {
@@ -64,6 +65,7 @@ const TEAM_MEMBERS = [
     bio: 'Wrote Drive Train Code and Autonomous Routines',
     image: 'https://via.placeholder.com/300x300/EF4444/FFFFFF?text=DP',
   }
+  
 ];
 
 export default function RoboticsWebsite() {
